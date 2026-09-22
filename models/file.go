@@ -52,7 +52,6 @@ func (c *FileHashClassifier) update(hash [32]byte, target, lr float64) {
 	}
 }
 
-// Hash: Xử lý byte tĩnh, không dùng slice
 func (c *FileHashClassifier) Hash(hash [32]byte) (uint32, uint32) {
 	var h1, h2 uint32 = 0x12345678, 0x87654321
 	for i := 0; i < 32; i++ {
@@ -67,9 +66,7 @@ func (c *FileHashClassifier) Hash(hash [32]byte) (uint32, uint32) {
 	return h1, h2
 }
 
-// Export xuất trọng số ra mảng để lưu xuống file JSON/Gob.
 func (c *FileHashClassifier) Export() []float64 { return c.weights }
 
-// Import nạp trọng số từ file vào model.
 func (c *FileHashClassifier) Import(w []float64) { c.weights = w }
 

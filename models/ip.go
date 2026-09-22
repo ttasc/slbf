@@ -43,7 +43,6 @@ func (c *IPClassifier) Train(positives, negatives []uint32, epochs int, lr float
 	}
 }
 
-// update tối ưu zero-allocation
 func (c *IPClassifier) update(ip uint32, target, lr float64) {
 	i1 := (ip >> 24) & 0xFF % c.size
 	i2 := (ip >> 16) & 0xFF % c.size
@@ -60,7 +59,6 @@ func (c *IPClassifier) update(ip uint32, target, lr float64) {
 	c.weights[i4] += err
 }
 
-// Hash tối ưu hóa toán học cho uint32
 func (c *IPClassifier) Hash(ip uint32) (uint32, uint32) {
 	h1 := ip * 0xcc9e2d51
 	h1 = (h1 << 15) | (h1 >> 17)
@@ -73,8 +71,6 @@ func (c *IPClassifier) Hash(ip uint32) (uint32, uint32) {
 	return h1, h2
 }
 
-// Export xuất trọng số ra mảng để lưu xuống file JSON/Gob.
 func (c *IPClassifier) Export() []float64 { return c.weights }
 
-// Import nạp trọng số từ file vào model.
 func (c *IPClassifier) Import(w []float64) { c.weights = w }

@@ -10,13 +10,12 @@ type Config[T any] struct {
 	Threshold     float64
 	BackupBits    uint32
 	BackupHashesK uint32
-	Model         LearnedModel[T] // Chỉ cần duy nhất 1 Dependency
+	Model         LearnedModel[T]
 }
 
-// Filter quản lý cấu trúc LBF, Thread-Safe tuyệt đối.
 type Filter[T any] struct {
 	mu        sync.RWMutex
-	model     LearnedModel[T] // Gộp chung AI và Hasher
+	model     LearnedModel[T]
 	backup    *backupFilter
 	threshold float64
 }
@@ -33,29 +32,26 @@ func New[T any](cfg *Config[T]) (*Filter[T], error) {
 	}, nil
 }
 
-// MayContain siêu tốc độ (Hot Path)
 func (f *Filter[T]) MayContain(value T) bool {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
 
-	// Lớp 1: AI
+	// Class 1: AI
 	if f.model.Predict(value) >= f.threshold {
 		return true
 	}
 
-	// Lớp 2: Bitset truyền thống (Model tự cung cấp hash)
+	// Class 2: Traditional Bitset
 	h1, h2 := f.model.Hash(value)
 	return f.backup.ContainsHash(h1, h2)
 }
 
-// Add khóa ghi an toàn tối đa
 func (f *Filter[T]) Add(value T) {
 	f.mu.RLock()
 	score := f.model.Predict(value)
 	f.mu.RUnlock()
 
 	if score < f.threshold {
-		// Model tự băm data của nó trước khi nhét vào bitset
 		h1, h2 := f.model.Hash(value)
 
 		f.mu.Lock()
@@ -64,7 +60,6 @@ func (f *Filter[T]) Add(value T) {
 	}
 }
 
-// SwapModel cập nhật Zero-Downtime
 func (f *Filter[T]) SwapModel(newModel LearnedModel[T], historicalPositives []T) {
 	tempBackup := newBackupFilter(f.backup.m, f.backup.k)
 	for _, item := range historicalPositives {

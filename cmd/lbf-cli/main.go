@@ -110,10 +110,21 @@ func runBench(args []string) {
 // =====================================================================
 
 func trainAndSave(model learnedbloom.LearnedModel[string], pos, neg []string, epochs int, lr float64, outFile string) {
-	fmt.Print("[*] Training in progress... ")
+	fmt.Println("\n--- TRAINING EXECUTION ---")
 	start := time.Now()
-	model.Train(pos, neg, epochs, lr)
-	fmt.Printf("Done. (%v)\n", time.Since(start))
+
+	// External Epoch Loop: This gives us control to log real-time progress
+	for e := 1; e <= epochs; e++ {
+		progress := (float64(e) / float64(epochs)) * 100
+		fmt.Printf("\r[*] Optimizing AI weights: Epoch %d/%d (%.1f%%)    ", e, epochs, progress)
+
+		// Train exactly 1 epoch per iteration
+		model.Train(pos, neg, 1, lr)
+	}
+
+	dur := time.Since(start)
+	// Overwrite the line with "Done" and clean up trailing characters with spaces
+	fmt.Printf("\r[*] Optimizing AI weights: 100%% (Done in %v)          \n", dur)
 
 	if wModel, ok := any(model).(Weightable); ok {
 		data, _ := json.Marshal(wModel.Export())

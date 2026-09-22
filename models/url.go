@@ -63,7 +63,6 @@ func (c *URLClassifier) Train(positives, negatives []string, epochs int, lr floa
 	}
 }
 
-// Lặp lại logic duyệt chuỗi để giữ Zero-Allocation (Bù CPU lấy RAM, an toàn cho GC)
 func (c *URLClassifier) update(url string, target, lr float64) {
 	l := len(url)
 	if l == 0 {
@@ -94,7 +93,6 @@ func (c *URLClassifier) update(url string, target, lr float64) {
 	}
 }
 
-// Hash: Cặp Murmur3 cho chuỗi
 func (c *URLClassifier) Hash(url string) (uint32, uint32) {
 	var h1, h2 uint32 = 0x12345678, 0x87654321
 	for i := 0; i < len(url); i++ {
@@ -109,8 +107,6 @@ func (c *URLClassifier) Hash(url string) (uint32, uint32) {
 	return h1, h2
 }
 
-// Export xuất trọng số ra mảng để lưu xuống file JSON/Gob.
 func (c *URLClassifier) Export() []float64 { return c.weights }
 
-// Import nạp trọng số từ file vào model.
 func (c *URLClassifier) Import(w []float64) { c.weights = w }

@@ -74,7 +74,6 @@ func (c *EmailDomainClassifier) update(email string, target, lr float64) {
 	}
 }
 
-// Hàm nội bộ parse email (Tách riêng để tái sử dụng, giữ code sạch)
 func (c *EmailDomainClassifier) parse(email string) (atIndex int, dotCount, domainLen uint32, valid bool) {
 	atIndex = -1
 	l := len(email)
@@ -104,8 +103,6 @@ func (c *EmailDomainClassifier) Hash(email string) (uint32, uint32) {
 	return h1, h2
 }
 
-// Export xuất trọng số ra mảng để lưu xuống file JSON/Gob.
-func (c *EmailDomainClassifier) Export() []float64 { return c.weights } // Đổi IPClassifier thành tên tương ứng
+func (c *EmailDomainClassifier) Export() []float64 { return c.weights }
 
-// Import nạp trọng số từ file vào model.
 func (c *EmailDomainClassifier) Import(w []float64) { c.weights = w }

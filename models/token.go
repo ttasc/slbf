@@ -82,9 +82,7 @@ func (c *TokenClassifier) Hash(token string) (uint32, uint32) {
 	return h1, h2
 }
 
-// Export xuất trọng số ra mảng để lưu xuống file JSON/Gob.
 func (c *TokenClassifier) Export() []float64 { return c.weights }
 
-// Import nạp trọng số từ file vào model.
 func (c *TokenClassifier) Import(w []float64) { c.weights = w }
 
