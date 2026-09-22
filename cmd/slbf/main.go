@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	learnedbloom "github.com/ttasc/lbf"
-	"github.com/ttasc/lbf/models"
+	"github.com/ttasc/slbf"
+	"github.com/ttasc/slbf/models"
 )
 
 const banner = `
@@ -72,7 +72,7 @@ func runTrain(args []string) {
 	}
 
 	fmt.Println("[*] Initializing URL model training sequence...")
-	model := models.NewURLClassifier(learnedbloom.DefaultAISize)
+	model := models.NewURLClassifier(slbf.DefaultAISize)
 
 	posData := readLines(*posFile)
 	negData := readLines(*negFile)
@@ -96,7 +96,7 @@ func runBench(args []string) {
 	}
 
 	fmt.Println("[*] Initializing benchmark suite for URL model...")
-	model := models.NewURLClassifier(learnedbloom.DefaultAISize)
+	model := models.NewURLClassifier(slbf.DefaultAISize)
 	loadWeights(model, *weightsFile)
 
 	posData := readLines(*posFile)
@@ -109,7 +109,7 @@ func runBench(args []string) {
 // CORE LOGIC & BENCHMARK SUITE
 // =====================================================================
 
-func trainAndSave(model learnedbloom.LearnedModel[string], pos, neg []string, epochs int, lr float64, outFile string) {
+func trainAndSave(model slbf.LearnedModel[string], pos, neg []string, epochs int, lr float64, outFile string) {
 	fmt.Println("\n--- TRAINING EXECUTION ---")
 	start := time.Now()
 
@@ -133,7 +133,7 @@ func trainAndSave(model learnedbloom.LearnedModel[string], pos, neg []string, ep
 	}
 }
 
-func benchModel(model learnedbloom.LearnedModel[string], posData, negData []string, loops int) {
+func benchModel(model slbf.LearnedModel[string], posData, negData []string, loops int) {
 	if len(posData) == 0 || len(negData) == 0 {
 		log.Fatal("Datasets cannot be empty.")
 	}
@@ -153,8 +153,8 @@ func benchModel(model learnedbloom.LearnedModel[string], posData, negData []stri
 	// ---------------------------------------------------
 	runtime.GC()
 	runtime.ReadMemStats(&m1)
-	tbf, _ := learnedbloom.New(&learnedbloom.Config[string]{
-		AISize: learnedbloom.DefaultAISize, Threshold: 2.0, BackupBits: tbfBits, BackupHashesK: 4, Model: model,
+	tbf, _ := slbf.New(&slbf.Config[string]{
+		AISize: slbf.DefaultAISize, Threshold: 2.0, BackupBits: tbfBits, BackupHashesK: 4, Model: model,
 	})
 
 	posLen := len(posData)
@@ -187,8 +187,8 @@ func benchModel(model learnedbloom.LearnedModel[string], posData, negData []stri
 	// ---------------------------------------------------
 	runtime.GC()
 	runtime.ReadMemStats(&m2)
-	lbf, _ := learnedbloom.New(&learnedbloom.Config[string]{
-		AISize: learnedbloom.DefaultAISize, Threshold: 0.85, BackupBits: lbfBits, BackupHashesK: 4, Model: model,
+	lbf, _ := slbf.New(&slbf.Config[string]{
+		AISize: slbf.DefaultAISize, Threshold: 0.85, BackupBits: lbfBits, BackupHashesK: 4, Model: model,
 	})
 
 	aiCatches := 0

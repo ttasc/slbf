@@ -1,4 +1,4 @@
-package learnedbloom
+package slbf
 
 // LearnedModel định nghĩa tiêu chuẩn khắt khe cho một Plugin nhúng vào hệ thống LBF.
 // Mọi Model đóng góp đều phải tuân thủ hợp đồng 3 điểm này.

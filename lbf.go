@@ -1,4 +1,4 @@
-package learnedbloom
+package slbf
 
 import (
 	"errors"

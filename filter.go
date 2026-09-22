@@ -1,4 +1,4 @@
-package learnedbloom
+package slbf
 
 // backupFilter chỉ thao tác trên toán hạng nhị phân.
 type backupFilter struct {

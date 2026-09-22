@@ -1,4 +1,4 @@
-package learnedbloom
+package slbf
 
 const (
 	// Mức cấu hình hệ thống (System Baselines)
