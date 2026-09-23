@@ -6,21 +6,21 @@ By combining lightweight, embedded Machine Learning models with a traditional bi
 
 It is tailor-made for high-performance systems like API Gateways (JWT/Token revocation), EDRs (Malware hash scanning), Anti-Spam engines, and Web Application Firewalls (IP/URL blocking).
 
-## ✨ Features
+## Features
 
-* ** Zero-Allocation AI Inference:** The prediction models run directly on RAM without triggering garbage collection, ensuring extreme low latency.
-* ** Massive Memory Savings:** By letting the AI catch the majority of true positives, the backup traditional bitset can be scaled down exponentially.
-* ** Generic Typed:** Powered by Go Generics (`Filter[T]`), allowing you to filter `string`, `uint32`, `[32]byte`, or any custom data type seamlessly.
-* ** Hot-Swapping:** Update AI weights dynamically at runtime without downtime via `SwapModel()`.
-* ** Thread-Safe:** Built with `sync.RWMutex` for highly concurrent read-heavy environments.
+* **Zero-Allocation AI Inference:** The prediction models run directly on RAM without triggering garbage collection, ensuring extreme low latency.
+* **Massive Memory Savings:** By letting the AI catch the majority of true positives, the backup traditional bitset can be scaled down exponentially.
+* **Generic Typed:** Powered by Go Generics (`Filter[T]`), allowing you to filter `string`, `uint32`, `[32]byte`, or any custom data type seamlessly.
+* **Hot-Swapping:** Update AI weights dynamically at runtime without downtime via `SwapModel()`.
+* **Thread-Safe:** Built with `sync.RWMutex` for highly concurrent read-heavy environments.
 
-## 🚀 Installation
+## Installation
 
 ```bash
 go get github.com/ttasc/slbf
 ```
 
-## 📖 Quick Start / Usage
+## Quick Start / Usage
 
 Here is a practical example of using `slbf` in an API Gateway to check if a JWT token has been revoked.
 
@@ -74,7 +74,7 @@ func main() {
 }
 ```
 
-## ⚙️ Custom Models & API Reference
+## Custom Models & API Reference
 
 The library provides several highly optimized models out of the box in the `models/` package. Each is mathematically tuned for its specific data type.
 
@@ -92,7 +92,7 @@ type LearnedModel[T any] interface {
 
 **⚠️ Important Rule:** The `Predict(value T)` and `Hash(value T)` methods **must be zero-allocation**. Do not use standard library functions that allocate memory on the heap (like `strings.Split`, regex, or standard JSON marshallers) inside these methods, as they are invoked on the hot path millions of times per second.
 
-## 📊 Benchmarking & Tooling
+## Benchmarking & Tooling
 
 The repository includes a comprehensive CLI tool for training and benchmarking the `URLClassifier`. You can use this tool to observe the exact RAM savings and throughput speedups against a traditional Bloom Filter.
 
@@ -107,7 +107,7 @@ go build -o slbf-tool ./cmd/slbf-url-model-benchmark/
 ./slbf-tool bench -weights weights.json -pos bad_urls.txt -neg test_urls.txt -loops 100
 ```
 
-## 🤝 Contributing
+## Contributing
 
 We welcome pull requests! To contribute to this project:
 1. Fork the repository.
@@ -116,6 +116,6 @@ We welcome pull requests! To contribute to this project:
 4. If you are adding a new classifier to `models/`, mathematically prove that `Predict` and `Hash` involve **zero heap allocations**.
 5. Submit a Pull Request.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
