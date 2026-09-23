@@ -1,3 +1,13 @@
+/**
+TokenClassifier - Mô hình chặn API Key / JWT (API Gateway)
+
+Vấn đề thực tế:
+Trong kiến trúc Microservices, khi user logout hoặc bị ban,
+JWT/API Key của họ bị đưa vào "Revocation List" (Danh sách thu hồi).
+API Gateway phải check danh sách này trên MỌI request.
+Dùng Redis vẫn sinh ra độ trễ mạng (Network Latency).
+LBF đặt ngay trên RAM của API Gateway là giải pháp tối ưu.
+**/
 package models
 
 import "math"

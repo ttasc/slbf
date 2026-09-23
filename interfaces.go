@@ -1,7 +1,7 @@
 package slbf
 
 // LearnedModel định nghĩa tiêu chuẩn khắt khe cho một Plugin nhúng vào hệ thống LBF.
-// Mọi Model đóng góp đều phải tuân thủ hợp đồng 3 điểm này.
+// Mọi Model đóng góp đều phải tuân thủ hợp đồng các điểm này.
 type LearnedModel[T any] interface {
 	// Predict tính toán xác suất bẩn/sạch bằng AI trên RAM (Zero-Allocation).
 	Predict(value T) float64

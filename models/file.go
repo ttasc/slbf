@@ -1,3 +1,12 @@
+/**
+FileHashClassifier - Mô hình quét mã độc (EDR / Anti-Malware)
+
+Vấn đề thực tế:
+Các hệ thống Antivirus, Mail Server hoặc Cloud Storage (như Google Drive, S3)
+phải liên tục kiểm tra xem file người dùng tải lên có thuộc danh sách hàng
+chục triệu mã băm (SHA-256) mã độc đã biết hay không.
+Việc truy vấn Database liên tục cho việc này sẽ đánh sập hệ thống.
+**/
 package models
 
 import (

@@ -77,7 +77,7 @@ func (c *EmailDomainClassifier) update(email string, target, lr float64) {
 func (c *EmailDomainClassifier) parse(email string) (atIndex int, dotCount, domainLen uint32, valid bool) {
 	atIndex = -1
 	l := len(email)
-	for i := 0; i < l; i++ {
+	for i := range l {
 		if email[i] == '@' {
 			atIndex = i
 		} else if atIndex != -1 && email[i] == '.' {

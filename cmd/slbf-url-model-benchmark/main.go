@@ -15,18 +15,6 @@ import (
 	"github.com/ttasc/slbf/models"
 )
 
-const banner = `
-======================================================
-      LEARNED BLOOM FILTER CLI (URL EDITION)
-======================================================
-`
-
-// Weightable represents models capable of exporting/importing AI weights.
-type Weightable interface {
-	Export() []float64
-	Import([]float64)
-}
-
 func main() {
 	if len(os.Args) < 2 {
 		printUsage()
@@ -42,14 +30,13 @@ func main() {
 	case "bench":
 		runBench(args)
 	default:
-		fmt.Printf("Error: Invalid command '%s'\n", command)
+		fmt.Printf("[-] Error: Invalid command '%s'\n", command)
 		printUsage()
 	}
 }
 
 func printUsage() {
-	fmt.Print(banner)
-	fmt.Println("Usage: lbf-cli <command> [flags]")
+	fmt.Println("Usage: slbf-url <command> [flags]")
 	fmt.Println("\nCommands:")
 	fmt.Println("  train   Train the AI URL model and output weights.json")
 	fmt.Println("  bench   Run comprehensive benchmark (FPR, RAM, Throughput)")
@@ -68,7 +55,7 @@ func runTrain(args []string) {
 	fs.Parse(args)
 
 	if *posFile == "" || *negFile == "" {
-		log.Fatal("Both -pos and -neg flags are required.")
+		log.Fatal("[-] Both -pos and -neg flags are required.")
 	}
 
 	fmt.Println("[*] Initializing URL model training sequence...")
@@ -92,7 +79,7 @@ func runBench(args []string) {
 	fs.Parse(args)
 
 	if *posFile == "" || *negFile == "" {
-		log.Fatal("Benchmark requires both -pos and -neg datasets.")
+		log.Fatal("[-] Benchmark requires both -pos and -neg datasets.")
 	}
 
 	fmt.Println("[*] Initializing benchmark suite for URL model...")
@@ -113,35 +100,29 @@ func trainAndSave(model slbf.LearnedModel[string], pos, neg []string, epochs int
 	fmt.Println("\n--- TRAINING EXECUTION ---")
 	start := time.Now()
 
-	// External Epoch Loop: This gives us control to log real-time progress
 	for e := 1; e <= epochs; e++ {
 		progress := (float64(e) / float64(epochs)) * 100
 		fmt.Printf("\r[*] Optimizing AI weights: Epoch %d/%d (%.1f%%)    ", e, epochs, progress)
-
-		// Train exactly 1 epoch per iteration
 		model.Train(pos, neg, 1, lr)
 	}
 
 	dur := time.Since(start)
-	// Overwrite the line with "Done" and clean up trailing characters with spaces
 	fmt.Printf("\r[*] Optimizing AI weights: 100%% (Done in %v)          \n", dur)
 
-	if wModel, ok := any(model).(Weightable); ok {
-		data, _ := json.Marshal(wModel.Export())
-		os.WriteFile(outFile, data, 0644)
-		fmt.Printf("[+] Weights successfully exported to: %s\n", outFile)
-	}
+	// Direct call to Export() - No runtime type assertion needed!
+	data, _ := json.Marshal(model.Export())
+	os.WriteFile(outFile, data, 0644)
+	fmt.Printf("[+] Weights successfully exported to: %s\n", outFile)
 }
 
 func benchModel(model slbf.LearnedModel[string], posData, negData []string, loops int) {
 	if len(posData) == 0 || len(negData) == 0 {
-		log.Fatal("Datasets cannot be empty.")
+		log.Fatal("[-] Datasets cannot be empty.")
 	}
 
 	totalItems := uint32(len(posData))
 	testQueryCount := len(negData) * loops
 
-	// Define optimal sizes: LBF uses 80% less memory than TBF
 	tbfBits := totalItems * 10
 	lbfBits := totalItems * 2
 
@@ -160,11 +141,11 @@ func benchModel(model slbf.LearnedModel[string], posData, negData []string, loop
 	posLen := len(posData)
 	for i, item := range posData {
 		if i%(posLen/20+1) == 0 {
-			fmt.Printf("\r[1/4] Populating Traditional BF: %d%%    ", (i*100)/posLen)
+			fmt.Printf("\r[*] [1/4] Populating Traditional BF: %d%%    ", (i*100)/posLen)
 		}
 		tbf.Add(item)
 	}
-	fmt.Print("\r[1/4] Populating Traditional BF: 100% (Done)    \n")
+	fmt.Print("\r[+] [1/4] Populating Traditional BF: 100% (Done)    \n")
 
 	runtime.ReadMemStats(&m2)
 	tbfRam := m2.Alloc - m1.Alloc
@@ -172,7 +153,7 @@ func benchModel(model slbf.LearnedModel[string], posData, negData []string, loop
 	tbfFalsePositives := 0
 	startTBF := time.Now()
 	for l := 0; l < loops; l++ {
-		fmt.Printf("\r[2/4] Stress Testing Traditional BF: Loop %d/%d...    ", l+1, loops)
+		fmt.Printf("\r[*] [2/4] Stress Testing Traditional BF: Loop %d/%d...    ", l+1, loops)
 		for _, item := range negData {
 			if tbf.MayContain(item) {
 				tbfFalsePositives++
@@ -180,7 +161,7 @@ func benchModel(model slbf.LearnedModel[string], posData, negData []string, loop
 		}
 	}
 	durTBF := time.Since(startTBF)
-	fmt.Printf("\r[2/4] Stress Testing Traditional BF: Done (%v)        \n", durTBF)
+	fmt.Printf("\r[+] [2/4] Stress Testing Traditional BF: Done (%v)        \n", durTBF)
 
 	// ---------------------------------------------------
 	// PHASE 2: LEARNED BLOOM FILTER
@@ -194,14 +175,14 @@ func benchModel(model slbf.LearnedModel[string], posData, negData []string, loop
 	aiCatches := 0
 	for i, item := range posData {
 		if i%(posLen/20+1) == 0 {
-			fmt.Printf("\r[3/4] Inferencing AI & Populating Learned BF: %d%%    ", (i*100)/posLen)
+			fmt.Printf("\r[*] [3/4] Inferencing AI & Populating Learned BF: %d%%    ", (i*100)/posLen)
 		}
 		if model.Predict(item) >= 0.85 {
 			aiCatches++
 		}
 		lbf.Add(item)
 	}
-	fmt.Print("\r[3/4] Inferencing AI & Populating Learned BF: 100% (Done)    \n")
+	fmt.Print("\r[+] [3/4] Inferencing AI & Populating Learned BF: 100% (Done)    \n")
 
 	runtime.ReadMemStats(&m3)
 	lbfRam := m3.Alloc - m2.Alloc
@@ -209,7 +190,7 @@ func benchModel(model slbf.LearnedModel[string], posData, negData []string, loop
 	lbfFalsePositives := 0
 	startLBF := time.Now()
 	for l := 0; l < loops; l++ {
-		fmt.Printf("\r[4/4] Stress Testing Learned BF: Loop %d/%d...    ", l+1, loops)
+		fmt.Printf("\r[*] [4/4] Stress Testing Learned BF: Loop %d/%d...    ", l+1, loops)
 		for _, item := range negData {
 			if lbf.MayContain(item) {
 				lbfFalsePositives++
@@ -217,7 +198,7 @@ func benchModel(model slbf.LearnedModel[string], posData, negData []string, loop
 		}
 	}
 	durLBF := time.Since(startLBF)
-	fmt.Printf("\r[4/4] Stress Testing Learned BF: Done (%v)        \n", durLBF)
+	fmt.Printf("\r[+] [4/4] Stress Testing Learned BF: Done (%v)        \n", durLBF)
 
 	// ---------------------------------------------------
 	// REPORT GENERATION
@@ -249,10 +230,11 @@ func benchModel(model slbf.LearnedModel[string], posData, negData []string, loop
 }
 
 // ---------------------------------------------------------------------
-// UTILITIES (Minimalist)
+// UTILITIES
 // ---------------------------------------------------------------------
 
-func loadWeights(model Weightable, path string) {
+// Direct call to Import() - No runtime type assertion needed!
+func loadWeights(model slbf.LearnedModel[string], path string) {
 	data, err := os.ReadFile(path)
 	if err == nil {
 		var w []float64
@@ -264,11 +246,10 @@ func loadWeights(model Weightable, path string) {
 	}
 }
 
-// readLines reads a file directly into a string slice with in-place progress log.
 func readLines(path string) []string {
 	file, err := os.Open(path)
 	if err != nil {
-		log.Fatalf("\nError opening file %s: %v", path, err)
+		log.Fatalf("\n[-] Error opening file %s: %v", path, err)
 	}
 	defer file.Close()
 
