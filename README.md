@@ -20,7 +20,7 @@ It is tailor-made for high-performance systems like API Gateways (JWT/Token revo
 go get github.com/ttasc/slbf
 ```
 
-## Quick Start / Usage
+## Quick Start
 
 Here is a practical example of using `slbf` in an API Gateway to check if a JWT token has been revoked.
 
@@ -74,7 +74,7 @@ func main() {
 }
 ```
 
-## Custom Models & API Reference
+## Custom Models
 
 The library provides several highly optimized models out of the box in the `models/` package. Each is mathematically tuned for its specific data type.
 
@@ -92,7 +92,7 @@ type LearnedModel[T any] interface {
 
 **⚠️ Important Rule:** The `Predict(value T)` and `Hash(value T)` methods **must be zero-allocation**. Do not use standard library functions that allocate memory on the heap (like `strings.Split`, regex, or standard JSON marshallers) inside these methods, as they are invoked on the hot path millions of times per second.
 
-## Benchmarking & Tooling
+## Benchmarking
 
 The repository includes a comprehensive CLI tool for training and benchmarking the `URLClassifier`. You can use this tool to observe the exact RAM savings and throughput speedups against a traditional Bloom Filter.
 
