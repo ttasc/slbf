@@ -39,9 +39,6 @@ func main() {
 	// 1. Initialize the built-in Token Classifier model
 	model := models.NewTokenClassifier(slbf.DefaultAISize)
 
-	// Note: In production, you would import pre-trained weights:
-	// model.Import(loadedWeights)
-
 	// For this example, we quickly train the model in-memory
 	revokedTokens := []string{"eyJhb...revoked_1", "eyJhb...revoked_2"}
 	validTokens := []string{"eyJhb...valid_1", "eyJhb...valid_2"}
@@ -85,12 +82,13 @@ type LearnedModel[T any] interface {
 	Predict(value T) float64
 	Train(positives, negatives []T, epochs int, lr float64)
 	Hash(value T) (uint32, uint32)
-	Export() []float64
-	Import(w []float64)
 }
 ```
 
-**⚠️ Important Rule:** The `Predict(value T)` and `Hash(value T)` methods **must be zero-allocation**. Do not use standard library functions that allocate memory on the heap (like `strings.Split`, regex, or standard JSON marshallers) inside these methods, as they are invoked on the hot path millions of times per second.
+> [!WARNING]
+> **Important Rule:** The `Predict(value T)` and `Hash(value T)` methods **must be zero-allocation**. Do not use standard library functions that allocate memory on the heap (like `strings.Split`, regex, or standard JSON marshallers) inside these methods, as they are invoked on the hot path millions of times per second.
+
+> Additionally, you need to implement the `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces if you want the model to support import/export.
 
 ## Benchmarking
 
