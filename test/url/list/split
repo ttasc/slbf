@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# 1. Khai báo tên file đầu vào
+soure="$1"
+train="80_${soure}_train"
+test="20_${soure}_test"
+
+# 2. Xáo trộn toàn bộ file và lưu vào một file tạm
+shuf "$soure" > tmp
+
+# 3. Tính toán số dòng cho file 80% (file_80)
+TONG_DONG=$(wc -l < tmp)
+DONG_80=$(( TONG_DONG * 8 / 10 ))
+
+# 4. Tiến hành cắt file
+head -n $DONG_80 tmp > "${train}"
+tail -n +$(( DONG_80 + 1 )) tmp > "${test}"
+
+# 5. Xóa file tạm
+rm tmp

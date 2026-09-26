@@ -1,6 +1,9 @@
 package models
 
-import "math"
+import (
+	"encoding/json"
+	"math"
+)
 
 const (
 	urlFnvOffset = 2166136261
@@ -107,6 +110,12 @@ func (c *URLClassifier) Hash(url string) (uint32, uint32) {
 	return h1, h2
 }
 
-func (c *URLClassifier) Export() []float64 { return c.weights }
+// MarshalBinary implement standard encoding.BinaryMarshaler
+func (c *URLClassifier) MarshalBinary() ([]byte, error) {
+	return json.Marshal(c.weights)
+}
 
-func (c *URLClassifier) Import(w []float64) { c.weights = w }
+// UnmarshalBinary implement standard encoding.BinaryUnmarshaler
+func (c *URLClassifier) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, &c.weights)
+}

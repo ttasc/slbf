@@ -2,6 +2,9 @@
 package slbf
 
 import (
+	"bytes"
+	"encoding"
+	"encoding/gob"
 	"errors"
 	"sync"
 )
@@ -23,7 +26,7 @@ type Filter[T any] struct {
 
 func New[T any](cfg *Config[T]) (*Filter[T], error) {
 	if cfg.Model == nil {
-		return nil, errors.New("learnedbloom: Model is required")
+		return nil, errors.New("slbf: model is required")
 	}
 
 	return &Filter[T]{
@@ -47,7 +50,7 @@ func (f *Filter[T]) MayContain(value T) bool {
 	return f.backup.ContainsHash(h1, h2)
 }
 
-func (f *Filter[T]) Add(value T) {
+func (f *Filter[T]) Add(value T) bool {
 	f.mu.RLock()
 	score := f.model.Predict(value)
 	f.mu.RUnlock()
@@ -58,7 +61,10 @@ func (f *Filter[T]) Add(value T) {
 		f.mu.Lock()
 		f.backup.AddHash(h1, h2)
 		f.mu.Unlock()
+
+		return false
 	}
+	return true
 }
 
 func (f *Filter[T]) SwapModel(newModel LearnedModel[T], historicalPositives []T) {
@@ -74,4 +80,70 @@ func (f *Filter[T]) SwapModel(newModel LearnedModel[T], historicalPositives []T)
 	f.model = newModel
 	f.backup = tempBackup
 	f.mu.Unlock()
+}
+
+// filterSnapshot là cấu trúc trung gian để đóng gói toàn bộ trạng thái hệ thống
+type filterSnapshot struct {
+	Threshold float64
+	M, K      uint32
+	Bitset    []uint64
+	ModelData []byte // Chứa dữ liệu của Model (JSON, Gob, v.v. tùy model quyết định)
+}
+
+// MarshalBinary đóng gói toàn bộ hệ thống
+func (f *Filter[T]) MarshalBinary() ([]byte, error) {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+
+	snap := filterSnapshot{
+		Threshold: f.threshold,
+		M:         f.backup.m,
+		K:         f.backup.k,
+		Bitset:    f.backup.bitset,
+	}
+
+	if marshaler, ok := any(f.model).(encoding.BinaryMarshaler); ok {
+		modelData, err := marshaler.MarshalBinary()
+		if err != nil {
+			return nil, err
+		}
+		snap.ModelData = modelData
+	} else {
+		return nil, errors.New("slbf: model does not support MarshalBinary")
+	}
+
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(snap); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// UnmarshalBinary giải nén và nạp hệ thống lên RAM (Dùng cho Client)
+func (f *Filter[T]) UnmarshalBinary(data []byte) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	var snap filterSnapshot
+	if err := gob.NewDecoder(bytes.NewReader(data)).Decode(&snap); err != nil {
+		return err
+	}
+
+	f.threshold = snap.Threshold
+	f.backup = &backupFilter{
+		m:      snap.M,
+		k:      snap.K,
+		bitset: snap.Bitset,
+	}
+
+	if len(snap.ModelData) > 0 {
+		if unmarshaler, ok := any(f.model).(encoding.BinaryUnmarshaler); ok {
+			if err := unmarshaler.UnmarshalBinary(snap.ModelData); err != nil {
+				return err
+			}
+		} else {
+			return errors.New("slbf: binary contains model data but current model does not support UnmarshalBinary")
+		}
+	}
+	return nil
 }

@@ -12,10 +12,4 @@ type LearnedModel[T any] interface {
 	// Hash chịu trách nhiệm băm dữ liệu kiểu T thành 2 số nguyên 32-bit.
 	// Dùng cho hệ thống Bloom Filter dự phòng. Thuật toán do Model tự quyết định.
 	Hash(value T) (uint32, uint32)
-
-	// Export xuất trọng số ra mảng để lưu xuống file JSON/Gob.
-	Export() []float64
-
-	// Import nạp trọng số từ file vào model.
-	Import(w []float64)
 }

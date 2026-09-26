@@ -74,8 +74,3 @@ func (c *FileHashClassifier) Hash(hash [32]byte) (uint32, uint32) {
 	}
 	return h1, h2
 }
-
-func (c *FileHashClassifier) Export() []float64 { return c.weights }
-
-func (c *FileHashClassifier) Import(w []float64) { c.weights = w }
-

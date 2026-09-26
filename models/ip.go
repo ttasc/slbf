@@ -70,7 +70,3 @@ func (c *IPClassifier) Hash(ip uint32) (uint32, uint32) {
 
 	return h1, h2
 }
-
-func (c *IPClassifier) Export() []float64 { return c.weights }
-
-func (c *IPClassifier) Import(w []float64) { c.weights = w }

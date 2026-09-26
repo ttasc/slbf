@@ -68,10 +68,7 @@ func (c *TokenClassifier) update(token string, target, lr float64) {
 	err := lr * (target - pred)
 
 	c.weights[uint32(l)%c.size] += err
-	scanLen := 16
-	if l < 16 {
-		scanLen = l
-	}
+	scanLen := min(l, 16)
 	h := uint32(2166136261)
 	for i := l - 1; i >= l-scanLen; i-- {
 		h = (h ^ uint32(token[i])) * tokenFnvPrime
@@ -91,8 +88,3 @@ func (c *TokenClassifier) Hash(token string) (uint32, uint32) {
 	}
 	return h1, h2
 }
-
-func (c *TokenClassifier) Export() []float64 { return c.weights }
-
-func (c *TokenClassifier) Import(w []float64) { c.weights = w }
-
