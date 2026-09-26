@@ -88,9 +88,6 @@ type LearnedModel[T any] interface {
 > [!WARNING]
 > **Important Rule:** The `Predict(value T)` and `Hash(value T)` methods **must be zero-allocation**. Do not use standard library functions that allocate memory on the heap (like `strings.Split`, regex, or standard JSON marshallers) inside these methods, as they are invoked on the hot path millions of times per second.
 
-> [!INFO]
-> Additionally, you need to implement the `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces if you want the model to support import/export.
-
 > [!NOTE]
 > Additionally, you need to implement the `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces if you want the model to support import/export.
 
