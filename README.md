@@ -88,6 +88,7 @@ type LearnedModel[T any] interface {
 > [!WARNING]
 > **Important Rule:** The `Predict(value T)` and `Hash(value T)` methods **must be zero-allocation**. Do not use standard library functions that allocate memory on the heap (like `strings.Split`, regex, or standard JSON marshallers) inside these methods, as they are invoked on the hot path millions of times per second.
 
+> [!INFO]
 > Additionally, you need to implement the `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces if you want the model to support import/export.
 
 ## Benchmarking
@@ -96,13 +97,16 @@ The repository includes a comprehensive CLI tool for training and benchmarking t
 
 ```bash
 # Build the tool
-go build -o slbf-tool ./cmd/slbf-url-model-benchmark/
+go build -o bench ./example/url/bench/main.go
 
-# Train the model and generate weights.json
-./slbf-tool train -pos bad_urls.txt -neg good_urls.txt -epochs 10 -lr 0.05 -out weights.json
-
-# Run the benchmark suite to compare Memory and Throughput
-./slbf-tool bench -weights weights.json -pos bad_urls.txt -neg test_urls.txt -loops 100
+./bench \
+    -train-pos train_pos.txt \
+    -train-neg train_neg.txt \
+    -epochs 100 \
+    -lr 0.01 \
+    -test-pos test_pos.txt \
+    -test-neg test_neg.txt \
+    -loops 100 \
 ```
 
 ## Contributing
