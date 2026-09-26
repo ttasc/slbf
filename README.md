@@ -91,6 +91,9 @@ type LearnedModel[T any] interface {
 > [!INFO]
 > Additionally, you need to implement the `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces if you want the model to support import/export.
 
+> [!NOTE]
+> Additionally, you need to implement the `encoding.BinaryMarshaler` and `encoding.BinaryUnmarshaler` interfaces if you want the model to support import/export.
+
 ## Benchmarking
 
 The repository includes a comprehensive CLI tool for training and benchmarking the `URLClassifier`. You can use this tool to observe the exact RAM savings and throughput speedups against a traditional Bloom Filter.
