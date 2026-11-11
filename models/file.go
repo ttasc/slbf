@@ -11,6 +11,7 @@ package models
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"math"
 )
 
@@ -73,4 +74,16 @@ func (c *FileHashClassifier) Hash(hash [32]byte) (uint32, uint32) {
 		h2 = h2*7 + 0x9e3779b9
 	}
 	return h1, h2
+}
+
+func (c *FileHashClassifier) MarshalBinary() ([]byte, error) {
+	return json.Marshal(c.weights)
+}
+
+func (c *FileHashClassifier) UnmarshalBinary(data []byte) error {
+	if err := json.Unmarshal(data, &c.weights); err != nil {
+		return err
+	}
+	c.size = uint32(len(c.weights))
+	return nil
 }

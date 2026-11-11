@@ -1,6 +1,9 @@
 package models
 
-import "math"
+import (
+	"encoding/json"
+	"math"
+)
 
 type IPClassifier struct {
 	weights []float64
@@ -69,4 +72,16 @@ func (c *IPClassifier) Hash(ip uint32) (uint32, uint32) {
 	h2 *= 0xc2b2ae35
 
 	return h1, h2
+}
+
+func (c *IPClassifier) MarshalBinary() ([]byte, error) {
+	return json.Marshal(c.weights)
+}
+
+func (c *IPClassifier) UnmarshalBinary(data []byte) error {
+	if err := json.Unmarshal(data, &c.weights); err != nil {
+		return err
+	}
+	c.size = uint32(len(c.weights))
+	return nil
 }
