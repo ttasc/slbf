@@ -2,8 +2,8 @@
 
 # 1. Khai báo tên file đầu vào
 soure="$1"
-train="80_${soure}_train"
-test="20_${soure}_test"
+train="train_${soure}"
+test="test_${soure}"
 
 # 2. Xáo trộn toàn bộ file và lưu vào một file tạm
 shuf "$soure" > tmp

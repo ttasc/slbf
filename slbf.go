@@ -41,7 +41,7 @@ func (f *Filter[T]) MayContain(value T) bool {
 	defer f.mu.RUnlock()
 
 	// Class 1: AI
-	if f.model.Predict(value) >= f.threshold {
+	if f.threshold <= 1.0 && f.model.Predict(value) >= f.threshold {
 		return true
 	}
 

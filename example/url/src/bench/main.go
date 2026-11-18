@@ -25,7 +25,7 @@ func main() {
 	flag.Parse()
 
 	if *trainPosFile == "" || *trainNegFile == "" || *testPosFile == "" || *testNegFile == "" {
-		log.Fatal("Usage: benchmark -train-pos <f> -train-neg <f> -test-pos <f> -test-neg <f> [-loops <int>]")
+		log.Fatal("Usage: bench -train-pos <f> -train-neg <f> -test-pos <f> -test-neg <f> [-loops <int>]")
 	}
 
 	// 1. Đọc 4 tập dữ liệu độc lập
@@ -49,14 +49,12 @@ func main() {
 	start := time.Now()
 	for e := 1; e <= *epochs; e++ {
 		progress := (float64(e) / float64(*epochs)) * 100
-		fmt.Printf("\r[*] [1/5] Training AI using {%s, %s}: Epoch %d/%d (%.1f%%)\033[K", *trainPosFile, *trainNegFile, e, *epochs, progress)
+		fmt.Printf("\r[*] [1/5] Training AI: Epoch %d/%d (%.1f%%)\033[K", e, *epochs, progress)
 		model.Train(trainPosData, trainNegData, 1, *lr)
 	}
 	dur := time.Since(start)
 	fmt.Printf("\r[+] [1/5] Training AI: 100%% (Done in %v)\033[K\n", dur)
 
-
-	// Khai báo kích thước công bằng (LBF dùng ít hơn TBF 5 lần)
 	tbfBits := uint32(totalTestPos * 10)
 	lbfBits := uint32(totalTestPos * 2)
 
@@ -73,7 +71,7 @@ func main() {
 
 	for i, item := range testPosData {
 		if i%(totalTestPos/10+1) == 0 {
-			fmt.Printf("\r[*] [2/5] Populating TBF with {%s}: %d%%\033[K", *testPosFile, (i*100)/totalTestPos)
+			fmt.Printf("\r[*] [2/5] Populating TBF: %d%%\033[K", (i*100)/totalTestPos)
 		}
 		tbf.Add(item)
 	}
@@ -85,7 +83,7 @@ func main() {
 	tbfFp := 0
 	startTBF := time.Now()
 	for l := 0; l < *loops; l++ {
-		fmt.Printf("\r[*] [3/5] Stress Testing TBF using {%s}: Loop %d/%d...\033[K", *testNegFile, l+1, *loops)
+		fmt.Printf("\r[*] [3/5] Stress Testing TBF: Loop %d/%d...\033[K", l+1, *loops)
 		for _, item := range testNegData {
 			if tbf.MayContain(item) {
 				tbfFp++
@@ -107,9 +105,8 @@ func main() {
 	aiCatches := 0
 	for i, item := range testPosData {
 		if i%(totalTestPos/10+1) == 0 {
-			fmt.Printf("\r[*] [4/5] Inferencing AI & Populating LBF with {%s}: %d%% (AI caught %d)\033[K", *testPosFile, (i*100)/totalTestPos, aiCatches)
+			fmt.Printf("\r[*] [4/5] Inferencing AI & Populating LBF: %d%% (AI caught %d)\033[K", (i*100)/totalTestPos, aiCatches)
 		}
-		// Đánh giá hiệu suất AI trên tập TEST BẨN (Unseen Data)
 		if lbf.Add(item) {
 			aiCatches++
 		}
@@ -117,12 +114,14 @@ func main() {
 	fmt.Printf("\r[+] [4/5] Inferencing AI & Populating LBF: 100%% (Done - AI caught %d)\033[K\n", aiCatches)
 
 	runtime.ReadMemStats(&m3)
-	lbfRam := float64(m3.Alloc-m2.Alloc) / 1024
+	lbfBitsetRam := float64(m3.Alloc-m2.Alloc) / 1024
+	aiWeightsRam := float64(slbf.DefaultAISize*8) / 1024 // 16384 float64 = 128 KB
+	lbfTotalRam := lbfBitsetRam + aiWeightsRam
 
 	lbfFp := 0
 	startLBF := time.Now()
 	for l := 0; l < *loops; l++ {
-		fmt.Printf("\r[*] [5/5] Stress Testing LBF using {%s}: Loop %d/%d...\033[K", *testNegFile, l+1, *loops)
+		fmt.Printf("\r[*] [5/5] Stress Testing LBF: Loop %d/%d...\033[K", l+1, *loops)
 		for _, item := range testNegData {
 			if lbf.MayContain(item) {
 				lbfFp++
@@ -138,7 +137,6 @@ func main() {
 	tbfFPR := (float64(tbfFp) / float64(queryCount)) * 100
 	lbfFPR := (float64(lbfFp) / float64(queryCount)) * 100
 	aiEff := (float64(aiCatches) / float64(totalTestPos)) * 100
-	ramSaved := 100.0 - (lbfRam / tbfRam * 100)
 	tbfTPS := float64(queryCount) / durTBF.Seconds()
 	lbfTPS := float64(queryCount) / durLBF.Seconds()
 	speedup := durTBF.Seconds() / durLBF.Seconds()
@@ -152,15 +150,25 @@ func main() {
 	fmt.Printf("   - Learned BF     : %.4f%% (%d errors)\n", lbfFPR, lbfFp)
 	fmt.Printf("   >> AI Efficiency : %.2f%% of malicious items caught without Bitset.\n\n", aiEff)
 
-	fmt.Println("2. MEMORY FOOTPRINT (Heap Allocation)")
+	fmt.Println("2. MEMORY FOOTPRINT (Physical Memory / Heap Allocation)")
 	fmt.Printf("   - Traditional BF : %.2f KB (Array of %d bits)\n", tbfRam, tbfBits)
-	fmt.Printf("   - Learned BF     : %.2f KB (Array of %d bits + AI Weights)\n", lbfRam, lbfBits)
-	fmt.Printf("   >> RAM Saved     : %.2f%%\n\n", ramSaved)
+	fmt.Printf("   - Learned BF     : %.2f KB (Bitset: %.2f KB [%d bits] + AI Weights: %.2f KB)\n", lbfTotalRam, lbfBitsetRam, lbfBits, aiWeightsRam)
+	if lbfTotalRam <= tbfRam {
+		ramSaved := (1.0 - (lbfTotalRam / tbfRam)) * 100
+		fmt.Printf("   >> RAM Saved     : %.2f%%\n\n", ramSaved)
+	} else {
+		ramOverhead := ((lbfTotalRam / tbfRam) - 1.0) * 100
+		fmt.Printf("   >> RAM Overhead  : +%.2f%% (AI Weights dominate on small N)\n\n", ramOverhead)
+	}
 
 	fmt.Println("3. THROUGHPUT (Processing Speed)")
 	fmt.Printf("   - Traditional BF : %v (~%.2f Req/sec)\n", durTBF.Seconds(), tbfTPS)
 	fmt.Printf("   - Learned BF     : %v (~%.2f Req/sec)\n", durLBF.Seconds(), lbfTPS)
-	fmt.Printf("   >> Speedup       : %.2fx faster\n", speedup)
+	if speedup >= 1.0 {
+		fmt.Printf("   >> Speedup       : %.2fx faster\n", speedup)
+	} else {
+		fmt.Printf("   >> Speedup       : %.2fx (%.2fx slower than Traditional BF)\n", speedup, 1.0/speedup)
+	}
 	fmt.Println("====================================================")
 }
 
@@ -176,6 +184,9 @@ func readLines(path string) []string {
 		if t := strings.TrimSpace(scanner.Text()); t != "" {
 			data = append(data, t)
 		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("[-] Error reading file: %v", err)
 	}
 	return data
 }

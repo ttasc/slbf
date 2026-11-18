@@ -13,15 +13,22 @@ const (
 type URLClassifier struct {
 	weights []float64
 	size    uint32
+	mask    uint32 // Bitmask nếu size là lũy thừa của 2 (size - 1)
 }
 
 func NewURLClassifier(size int) *URLClassifier {
 	if size <= 0 {
 		size = 16384
 	}
+	s := uint32(size)
+	var mask uint32
+	if (s & (s - 1)) == 0 {
+		mask = s - 1
+	}
 	return &URLClassifier{
-		weights: make([]float64, size),
-		size:    uint32(size),
+		weights: make([]float64, s),
+		size:    s,
+		mask:    mask,
 	}
 }
 
@@ -31,24 +38,39 @@ func (c *URLClassifier) Predict(url string) float64 {
 		return 0
 	}
 
-	score := c.weights[uint32(l)%c.size]
-	if l >= 3 {
-		for i := 0; i <= l-3; i++ {
-			h := uint32(urlFnvOffset)
-			h = (h ^ uint32(url[i])) * urlFnvPrime
-			h = (h ^ uint32(url[i+1])) * urlFnvPrime
-			h = (h ^ uint32(url[i+2])) * urlFnvPrime
-			score += c.weights[h%c.size]
-		}
+	mask := c.mask
+	size := c.size
+	useMask := mask != 0
+
+	var score float64
+	if useMask {
+		score = c.weights[uint32(l)&mask]
+	} else {
+		score = c.weights[uint32(l)%size]
 	}
-	if l >= 4 {
-		for i := 0; i <= l-4; i++ {
-			h := uint32(urlFnvOffset)
-			h = (h ^ uint32(url[i])) * urlFnvPrime
-			h = (h ^ uint32(url[i+1])) * urlFnvPrime
-			h = (h ^ uint32(url[i+2])) * urlFnvPrime
-			h = (h ^ uint32(url[i+3])) * urlFnvPrime
-			score += c.weights[h%c.size]
+
+	if l >= 3 {
+		max4 := l - 4
+		for i := 0; i <= l-3; i++ {
+			// Tính 3-gram
+			h3 := (uint32(urlFnvOffset) ^ uint32(url[i])) * urlFnvPrime
+			h3 = (h3 ^ uint32(url[i+1])) * urlFnvPrime
+			h3 = (h3 ^ uint32(url[i+2])) * urlFnvPrime
+
+			if useMask {
+				score += c.weights[h3&mask]
+				// Kế thừa h3 để tính tiếp 4-gram mà không băm lại từ đầu
+				if i <= max4 {
+					h4 := (h3 ^ uint32(url[i+3])) * urlFnvPrime
+					score += c.weights[h4&mask]
+				}
+			} else {
+				score += c.weights[h3%size]
+				if i <= max4 {
+					h4 := (h3 ^ uint32(url[i+3])) * urlFnvPrime
+					score += c.weights[h4%size]
+				}
+			}
 		}
 	}
 
@@ -56,7 +78,7 @@ func (c *URLClassifier) Predict(url string) float64 {
 }
 
 func (c *URLClassifier) Train(positives, negatives []string, epochs int, lr float64) {
-	for range epochs {
+	for epoch := 0; epoch < epochs; epoch++ {
 		for _, url := range positives {
 			c.update(url, 1.0, lr)
 		}
@@ -68,30 +90,46 @@ func (c *URLClassifier) Train(positives, negatives []string, epochs int, lr floa
 
 func (c *URLClassifier) update(url string, target, lr float64) {
 	l := len(url)
-	if l == 0 {
+	if l == 0 || c.size == 0 {
 		return
 	}
+
 	pred := c.Predict(url)
 	err := lr * (target - pred)
-
-	c.weights[uint32(l)%c.size] += err
-	if l >= 3 {
-		for i := 0; i <= l-3; i++ {
-			h := uint32(urlFnvOffset)
-			h = (h ^ uint32(url[i])) * urlFnvPrime
-			h = (h ^ uint32(url[i+1])) * urlFnvPrime
-			h = (h ^ uint32(url[i+2])) * urlFnvPrime
-			c.weights[h%c.size] += err
-		}
+	if err == 0 {
+		return
 	}
-	if l >= 4 {
-		for i := 0; i <= l-4; i++ {
-			h := uint32(urlFnvOffset)
-			h = (h ^ uint32(url[i])) * urlFnvPrime
-			h = (h ^ uint32(url[i+1])) * urlFnvPrime
-			h = (h ^ uint32(url[i+2])) * urlFnvPrime
-			h = (h ^ uint32(url[i+3])) * urlFnvPrime
-			c.weights[h%c.size] += err
+
+	mask := c.mask
+	size := c.size
+	useMask := mask != 0
+
+	if useMask {
+		c.weights[uint32(l)&mask] += err
+	} else {
+		c.weights[uint32(l)%size] += err
+	}
+
+	if l >= 3 {
+		max4 := l - 4
+		for i := 0; i <= l-3; i++ {
+			h3 := (uint32(urlFnvOffset) ^ uint32(url[i])) * urlFnvPrime
+			h3 = (h3 ^ uint32(url[i+1])) * urlFnvPrime
+			h3 = (h3 ^ uint32(url[i+2])) * urlFnvPrime
+
+			if useMask {
+				c.weights[h3&mask] += err
+				if i <= max4 {
+					h4 := (h3 ^ uint32(url[i+3])) * urlFnvPrime
+					c.weights[h4&mask] += err
+				}
+			} else {
+				c.weights[h3%size] += err
+				if i <= max4 {
+					h4 := (h3 ^ uint32(url[i+3])) * urlFnvPrime
+					c.weights[h4%size] += err
+				}
+			}
 		}
 	}
 }
@@ -110,12 +148,21 @@ func (c *URLClassifier) Hash(url string) (uint32, uint32) {
 	return h1, h2
 }
 
-// MarshalBinary implement standard encoding.BinaryMarshaler
+// MarshalBinary hiện thực chuẩn encoding.BinaryMarshaler
 func (c *URLClassifier) MarshalBinary() ([]byte, error) {
 	return json.Marshal(c.weights)
 }
 
-// UnmarshalBinary implement standard encoding.BinaryUnmarshaler
+// UnmarshalBinary hiện thực chuẩn encoding.BinaryUnmarshaler
 func (c *URLClassifier) UnmarshalBinary(data []byte) error {
-	return json.Unmarshal(data, &c.weights)
+	if err := json.Unmarshal(data, &c.weights); err != nil {
+		return err
+	}
+	c.size = uint32(len(c.weights))
+	if (c.size & (c.size - 1)) == 0 && c.size > 0 {
+		c.mask = c.size - 1
+	} else {
+		c.mask = 0
+	}
+	return nil
 }
