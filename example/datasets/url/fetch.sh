@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-BASE_DIR="datasets/url"
+BASE_DIR="."
 mkdir -p "$BASE_DIR"
 
 TMP_DIR=$(mktemp -d)
